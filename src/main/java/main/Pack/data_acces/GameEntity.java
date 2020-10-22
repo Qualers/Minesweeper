@@ -1,8 +1,9 @@
-package main.Pack;
+package main.pack.data_acces;
 
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import main.pack.service.GameStatus;
 
 import javax.persistence.*;
 import java.io.Serializable;
@@ -11,7 +12,7 @@ import java.util.List;
 @Entity
 @Table(name = "games")
 @NoArgsConstructor
-class GameEntity implements Serializable {
+public class GameEntity implements Serializable {
 
     @Column(name = "id", unique = true, nullable = false)
     @Id
@@ -36,7 +37,7 @@ class GameEntity implements Serializable {
     @Setter
     private GameStatus statusGame;
 
-    GameEntity(String gameName) {
+    public GameEntity(String gameName) {
         this.gameName = gameName;
         setStatusGame(GameStatus.DURING);
     }

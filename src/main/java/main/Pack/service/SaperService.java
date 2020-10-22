@@ -1,11 +1,11 @@
-package main.Pack;
+package main.pack.service;
 
 import java.util.List;
 
 public interface SaperService {
     Integer createNewGame(GameDTO gameDTO);
 
-    Integer getIdGame(String gameName) throws Exception;
+    Integer getIdGame(String gameName);
 
     boolean isFieldRevealed(int gameId, PlayerChoice playerChoice);
 

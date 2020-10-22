@@ -1,11 +1,11 @@
-package main.Pack;
+package main.pack.service;
 
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 @NoArgsConstructor
-class GameDTO {
+public class GameDTO {
 
     @Getter
     @Setter
@@ -33,7 +33,7 @@ class GameDTO {
     private int coordinatesBomb;
 
 
-    GameDTO(int height, int width, int bombsCount) {
+    public GameDTO(int height, int width, int bombsCount) {
         this.height = height;
         this.width = width;
         this.bombsCount = bombsCount;

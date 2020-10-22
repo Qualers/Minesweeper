@@ -1,19 +1,23 @@
-package main.Pack;
+package main.pack.service;
+
+
+import lombok.RequiredArgsConstructor;
+import main.pack.data_acces.FieldDAO;
+import main.pack.data_acces.FieldEntity;
+import main.pack.data_acces.GameEntity;
+import main.pack.data_acces.GamesDAO;
 
 import java.util.Arrays;
 import java.util.List;
 import java.util.Random;
 
+@RequiredArgsConstructor
+public class SaperServiceImpl implements SaperService {
 
-class SaperServiceImpl implements SaperService {
+    private static final Integer BOMB = -1;
 
     private final GamesDAO gamesDAO;
     private final FieldDAO fieldDAO;
-
-    SaperServiceImpl(GamesDAO gamesDAO, FieldDAO fieldDAO) {
-        this.fieldDAO = fieldDAO;
-        this.gamesDAO = gamesDAO;
-    }
 
 
     @Override
@@ -39,14 +43,14 @@ class SaperServiceImpl implements SaperService {
                 fieldEntities[x++] = new FieldEntity(i, j, gameEntity);
             }
         }
-        fieldDAO.saveField(fieldEntities);
+        fieldDAO.saveField(Arrays.asList(fieldEntities));
         randomSetBombsOnBoard(gameDTO, Arrays.asList(fieldEntities));
     }
 
 
     private void randomSetBombsOnBoard(GameDTO gameDTO, List<FieldEntity> fieldEntities) {
         chooseCoordinateForBomb(gameDTO, fieldEntities);
-        fieldDAO.updateValueFields(fieldEntities);
+        fieldDAO.saveField(fieldEntities);
     }
 
     private void chooseCoordinateForBomb(GameDTO gameDTO, List<FieldEntity> fieldEntities) {
@@ -63,7 +67,8 @@ class SaperServiceImpl implements SaperService {
 
             } while (fieldEntities.get(gameDTO.getCoordinatesBomb()).isBomb());
 
-            fieldEntities.get(gameDTO.getCoordinatesBomb()).setValueField(-1);
+
+            fieldEntities.get(gameDTO.getCoordinatesBomb()).setValueField(BOMB);
             this.putDigitsAroundTheBombs(fieldEntities, gameDTO);
         }
 
@@ -71,7 +76,7 @@ class SaperServiceImpl implements SaperService {
     }
 
     private void putDigitsAroundTheBombs(List<FieldEntity> fieldEntityList, GameDTO gameDTO) {
-        int xField = fieldEntityList.get(gameDTO.getCoordinatesBomb()).getXField(); //nie ma sensu pchac tego do DTO, lepiej zmienna od kordynatu
+        int xField = fieldEntityList.get(gameDTO.getCoordinatesBomb()).getXField();
         int yField = fieldEntityList.get(gameDTO.getCoordinatesBomb()).getYField();
         int coordinateForIncreasingNumber;
         for (int i = -1; i < 2; i++) {
@@ -94,19 +99,17 @@ class SaperServiceImpl implements SaperService {
     }
 
     @Override
-    public Integer getIdGame(String gameName) {
+    public Integer getIdGame(String gameName) throws RuntimeException {
 
         try {
             List<String> namesAllGames = getNamesGames();
-//todo czy na pewno dobrze
             validateGameName(namesAllGames, gameName);
         } catch (Exception invalidName) {
-            throw new RuntimeException(invalidName);
+            throw new RuntimeException("Invalid GameName");
         }
 
-
-        GameEntity gameEntity = gamesDAO.getGameByName(gameName); //todo validate
-        return gameEntity.getId(); //zrobic wyjatek i rzucic wyzej
+        GameEntity gameEntity = gamesDAO.getGameByName(gameName);
+        return gameEntity.getId();
     }
 
     @Override
@@ -122,10 +125,9 @@ class SaperServiceImpl implements SaperService {
 
 
     private GameDTO getHeightAndWidthByID(int gameId) {
-        //todo n+1 problem hibernate
         int height = 0;
         int width = 0;
-        GameEntity gameEntity = gamesDAO.getEntityGameById(gameId);//todo na podstawie ID moge od razu pobrac cala liste encji bezposrednio z fieldDAO
+        GameEntity gameEntity = gamesDAO.getEntityGameById(gameId);
         List<FieldEntity> fieldEntities = gameEntity.getListField();
         for (FieldEntity fieldEntity : fieldEntities) {
             if (fieldEntity.getXField() > height) {
@@ -135,26 +137,23 @@ class SaperServiceImpl implements SaperService {
                 width = fieldEntity.getYField();
             }
         }
-        return new GameDTO(height + 1, width + 1);  //todo inne dto tylko z hig wid
+        return new GameDTO(height + 1, width + 1);
     }
 
 
     private int getCoordinateField(GameDTO gameDTO, int x, int y) {
-        return (x * gameDTO.getWidth()) + y;//todo nie wyliczam indexu tylko przeszukuje cala liste w poszukiwaniu pola z takimi X oraz Y
+        return (x * gameDTO.getWidth()) + y;
     }
 
 
     @Override
-    public void deleteTargetGame(String nameDeleteGame) { //todo no. rzucam wyjatkiem poiom wyzej i tam przechwytuje i pokazuje komunikat
-        gamesDAO.deleteGame(gamesDAO.getGameByName(nameDeleteGame)); //todo jesli na innym widoku nie bedzie walaidacji ( bo ktos ni zrobi) to dupa
-        // tutaj walidacja musi byc TEZ
+    public void deleteTargetGame(String nameDeleteGame) {
+        gamesDAO.deleteGame(gamesDAO.getGameByName(nameDeleteGame));
     }
 
     @Override
-    public boolean validateGameName(List<String> namesGames, String nameGame) { //todo rename np. gameExists
-        boolean validCompatibility = false; //todo moglbym teoretycznie wyslac dowolna liste tutaj i co?... i kupa
-        //todo dlatego lepiej tutaj pobrac liste gier i sprawdzic czy podana nazwa istnieje, albo sprobowac pobrac gre o takiej nazwie
-
+    public boolean validateGameName(List<String> namesGames, String nameGame) {
+        boolean validCompatibility = false;
         for (String gameName : namesGames) {
             if (gameName.equals(nameGame)) {
                 validCompatibility = true;
@@ -162,13 +161,12 @@ class SaperServiceImpl implements SaperService {
             }
         }
         return validCompatibility;
-        //todo better return namesGames.contains(nameGame); i nie ma potrzeby calej tej powyzszej logiki
     }
 
 
     @Override
-    public GameDTO getBoard(int gameId) {// todo
-        return createBoardDTO(gameId); //todo better poporostu zwracam tablicy pol, bez gameDTO
+    public GameDTO getBoard(int gameId) {
+        return createBoardDTO(gameId);
     }
 
     private GameDTO createBoardDTO(int gameId) {
@@ -182,7 +180,7 @@ class SaperServiceImpl implements SaperService {
 
     private void createFinalBoardDTO(GameDTO gameDTO, List<FieldEntity> fieldEntityList) {
 
-        for (int x = 0, fieldListIterator = 0; x < gameDTO.getHeight(); x++) {//todo nieczytelne
+        for (int x = 0, fieldListIterator = 0; x < gameDTO.getHeight(); x++) {
             for (int y = 0; y < gameDTO.getWidth(); y++) {
                 gameDTO.getBoardGameDTO()[x][y].setFieldStatus(fieldEntityList.get(fieldListIterator).getStatusField());
                 gameDTO.getBoardGameDTO()[x][y].setNumber(fieldEntityList.get(fieldListIterator).getValueField());
@@ -193,7 +191,7 @@ class SaperServiceImpl implements SaperService {
     }
 
     private void createDefaultBoard(GameDTO gameDTO) {
-        gameDTO.createBoardGameDTO(); //todo lepiej logike z tego zrbic tutaj i pozniej zrobic set na DTO
+        gameDTO.createBoardGameDTO();
 
         for (int i = 0; i < gameDTO.getHeight(); i++) {
             for (int j = 0; j < gameDTO.getWidth(); j++) {
@@ -226,7 +224,7 @@ class SaperServiceImpl implements SaperService {
         int coordinateUnFlag = getCoordinateField(gameDTO, playerChoice.getCoordinatesX(), playerChoice.getCoordinatesY());
         List<FieldEntity> fieldEntityList = gameEntity.getListField();
         fieldEntityList.get(coordinateUnFlag).setStatusField(FieldStatus.COVERED);
-        fieldDAO.updateUnFlagField(fieldEntityList.get(coordinateUnFlag));
+        fieldDAO.saveField(fieldEntityList.get(coordinateUnFlag));
     }
 
 
@@ -238,10 +236,10 @@ class SaperServiceImpl implements SaperService {
         List<FieldEntity> fieldEntityList = gameEntity.getListField();
         fieldEntityList.get(coordinateFlagField).setStatusField(FieldStatus.FLAGGED);
 
-        fieldDAO.updateFlagField(fieldEntityList.get(coordinateFlagField));
+        fieldDAO.saveField(fieldEntityList.get(coordinateFlagField));
     }
 
-    private GameStatus tryRevealField(PlayerChoice playerChoice, int gameId) {//todo metoa ma dzialac a nie probowac (bez try w nazwie)
+    private GameStatus tryRevealField(PlayerChoice playerChoice, int gameId) {
         GameDTO gameDTO = getHeightAndWidthByID(gameId);
         GameEntity gameEntity = gamesDAO.getEntityGameById(gameId);
 
@@ -259,7 +257,6 @@ class SaperServiceImpl implements SaperService {
 
     private GameStatus checkWinConditions(List<FieldEntity> fieldEntity) {
         GameDTO gameDTO = new GameDTO();
-        //todo np. increaseNumberBombs jest wykorzystywane tylko tu, wiec bez sensu trzymac to w DTO
         for (FieldEntity field : fieldEntity) {
 
             if (field.getStatusField() == FieldStatus.COVERED || field.getStatusField() == FieldStatus.FLAGGED) {
@@ -294,24 +291,24 @@ class SaperServiceImpl implements SaperService {
                 if ((yField + column) < 0 || (yField + column) > gameDTO.getWidth() - 1) {
                     continue;
                 }
-                DataRevealField dataRevealField = new DataRevealField(gameDTO, xField, yField, row, column);
-                reveal(dataRevealField, fieldEntities);
+                DataRevealFieldDTO dataRevealFieldDTO = new DataRevealFieldDTO(gameDTO, xField, yField, row, column);
+                reveal(dataRevealFieldDTO, fieldEntities);
             }
         }
-        fieldDAO.updateValueFields(fieldEntities);
+        fieldDAO.saveField(fieldEntities);
     }
 
-    private void reveal(DataRevealField dataRevealField, List<FieldEntity> fieldEntities) { //todo yyyyyyyyyyyy (niecyzteln)
-        int coordinateRevealField = getCoordinateField(dataRevealField.getGameDTO(), dataRevealField.getXField() + dataRevealField.getRow(), dataRevealField.getYField() + dataRevealField.getColumn());
+    private void reveal(DataRevealFieldDTO dataRevealFieldDTO, List<FieldEntity> fieldEntities) {
+        int coordinateRevealField = getCoordinateField(dataRevealFieldDTO.getGameDTO(), dataRevealFieldDTO.getXField() + dataRevealFieldDTO.getRow(), dataRevealFieldDTO.getYField() + dataRevealFieldDTO.getColumn());
         if (fieldEntities.get(coordinateRevealField).getStatusField() == FieldStatus.COVERED && fieldEntities.get(coordinateRevealField).getValueField() > -1) {
 
             fieldEntities.get(coordinateRevealField).setStatusField(FieldStatus.REVEALED);
             if (fieldEntities.get(coordinateRevealField).getValueField() == 0) {
 
-                coordinateRevealField = getCoordinateField(dataRevealField.getGameDTO(), dataRevealField
-                        .getXField() + dataRevealField.getRow(), dataRevealField.getYField() + dataRevealField.getColumn());
+                coordinateRevealField = getCoordinateField(dataRevealFieldDTO.getGameDTO(), dataRevealFieldDTO
+                        .getXField() + dataRevealFieldDTO.getRow(), dataRevealFieldDTO.getYField() + dataRevealFieldDTO.getColumn());
 
-                recursionRevealFields(coordinateRevealField, fieldEntities, dataRevealField.getGameDTO());
+                recursionRevealFields(coordinateRevealField, fieldEntities, dataRevealFieldDTO.getGameDTO());
             }
         }
     }
@@ -323,8 +320,11 @@ class SaperServiceImpl implements SaperService {
     }
 
     @Override
-    public void setStatusGame(GameStatus gameStatus, Integer gameId) { //todo valdiate if game exists
-        gamesDAO.updateStatusGame(gameId, gameStatus);
+    public void setStatusGame(GameStatus gameStatus, Integer gameId) {
+
+        GameEntity gameEntity = gamesDAO.getEntityGameById(gameId);
+        gameEntity.setStatusGame(gameStatus);
+        gamesDAO.updateStatusGame(gameEntity);
     }
 
 }

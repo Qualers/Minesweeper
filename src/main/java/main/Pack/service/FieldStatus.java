@@ -1,4 +1,4 @@
-package main.Pack;
+package main.pack.service;
 
 public enum FieldStatus {
     COVERED,

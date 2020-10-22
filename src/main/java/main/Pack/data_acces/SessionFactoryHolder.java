@@ -1,9 +1,10 @@
-package main.Pack;
+package main.pack.data_acces;
 
 import org.hibernate.SessionFactory;
 import org.hibernate.cfg.Configuration;
 
-class SessionFactoryHolder {
+
+public class SessionFactoryHolder {
 
     private static SessionFactoryHolder instance;
 
@@ -30,7 +31,7 @@ class SessionFactoryHolder {
         return instance;
     }
 
-    static SessionFactory getFactory() {
+    public static SessionFactory getFactory() {
         return getInstance().factory;
     }
 }

@@ -1,28 +1,26 @@
-package main.Pack;
+package main.pack.view;
 
 import lombok.RequiredArgsConstructor;
+import main.pack.service.*;
 
 import java.util.List;
 import java.util.Scanner;
 
 @RequiredArgsConstructor
-class SaperConsoleView {
+public class SaperConsoleView {
 
     private static final String COVERED_FIELD_DISPLAY_CHARACTER = "C";
     private static final String FLAGGED_FIELD_DISPLAY_CHARACTER = "F";
     private static final String FIELD_PRINT_FORMAT = " [%s]";
     private static final String REVEALED_EMPTY_WIELD_DISPLAY_CHARACTER = " ";
+    private static final Integer GAME_NAME_LENGHT = 20;
 
     private Scanner scan = new Scanner(System.in);
 
     private final SaperService saperService;
 
-//    SaperConsoleView(SaperService saperService) {
-//        this.saperService = saperService;
-//    } //todo zamiast tego RequiredArgsConstructor (8), tworzy konstruktor ktory zawiera( przyjmuje,ustawia) tylko pola final
 
-
-    void startApp() {
+    public void startApp() {
         int activitySelection = 0;
         do {
             System.out.println("Wybierz co chcesz zrobic \n1-Graj \n2-Usun wybrana gre \n3-Zakoncz program");
@@ -39,7 +37,7 @@ class SaperConsoleView {
                 break;
             }
             case 2: {
-                removeGame();
+                displayRemoveGameMenu();
                 break;
             }
             case 3: {
@@ -52,7 +50,7 @@ class SaperConsoleView {
 
     private void play() {
         int gameMode = gameModeSelection();
-        Integer gameId = startChooseGame(gameMode);
+        Integer gameId = displayChooseGame(gameMode);
         startGame(gameId);
     }
 
@@ -71,21 +69,21 @@ class SaperConsoleView {
         return choice;
     }
 
-    private Integer startChooseGame(int gameMode) { // todo rename displayChooseGame
+    private Integer displayChooseGame(int gameMode) {
         switch (gameMode) {
             case 1:
                 System.out.println("Nowa gra");
-                return newGame();
+                return initializationNewGame();
             case 2:
                 System.out.println("Wczytaj gre");
                 return chooseGameToLoad();
             default:
-                throw new IllegalArgumentException("bledny wartosc"); //todo yyyyyyyyyyyyy
+                throw new IllegalArgumentException("Nie ma takiej wartosci");
         }
     }
 
 
-    private Integer newGame() { //todo rename
+    private Integer initializationNewGame() {
 
         int heightBoardGame = getNumberOfRows();
         int widthBoardGame = getNumberOfColumns();
@@ -94,59 +92,53 @@ class SaperConsoleView {
 
         String nameGame;
         do {
-            System.out.println("podaj nazwe gry, do 20 znakow"); //todo co sie stanie jak sie nie wpisze zadnego znaku
+            System.out.println("podaj nazwe gry, do 20 znakow");
             nameGame = scan.next();
-        } while (nameGame.length() > 20); // todo magic number
+        } while (nameGame.length() > GAME_NAME_LENGHT);
         gameDTO.setGameName(nameGame);
         return saperService.createNewGame(gameDTO);
     }
 
-
-    private Integer chooseGameToLoad() { // todo dupliakcja kodu z usuwaniem gry (wyekstrachowac)  i np. printa czy to co sier= roznic pdac jako parametr metody
-        List<String> namesAllGames;
-        String nameGameToLoad = null;
-        namesAllGames = saperService.getNamesGames();
-
-        //todo nie zakladamy ze warstwa nizej cos sie dzieje (np. cos si waliduje) ale o warstwie wyzej nie mozmey zakladac (jak cos wykorzysstuje to zakladam ze to dziala) np. biblioteka czy warstwa nizej)
-
+    private String viewAllGameName(String string) {
+        List<String> namesAllGames = saperService.getNamesGames();
+        String choosenNameGame;
 
         for (String game : namesAllGames) {
             System.out.println(game);
         }
 
-
         do {
-            System.out.println("Podaj nazwe gry do wczytania");
-            nameGameToLoad = scan.next();
-        } while (!saperService.validateGameName(namesAllGames, nameGameToLoad));
+            System.out.println(string);
+            choosenNameGame = scan.next();
+        } while (!saperService.validateGameName(namesAllGames, choosenNameGame));
 
-        Integer gameId = null;
-        try {
+        return choosenNameGame;
+    }
 
+    private Integer chooseGameToLoad() {
+        boolean validateGameName = true;
+        Integer gameId = 0;
+        do {
+            String stringToLoad = "Podaj nazwe gry do wczytania";
+            String gameToLoad = viewAllGameName(stringToLoad);
 
-            gameId = saperService.getIdGame(nameGameToLoad);
-        } catch (Exception error) {
+            try {
+                gameId = saperService.getIdGame(gameToLoad);
+            } catch (RuntimeException invalidNameEx) {
+                System.out.println(invalidNameEx.getMessage());
+                validateGameName = false;
+            }
 
-        }
-
-
+        } while (!validateGameName);
 
         return gameId;
     }
 
 
-    private void removeGame() { //todo displayRemoveGameMenu rename
-        List<String> namesGames = saperService.getNamesGames();
+    private void displayRemoveGameMenu() {
+        String gameToDelete = "Podaj nazwe gry do usuniecia";
 
-        for (String o : namesGames) {
-            System.out.println(o);
-        }
-
-        String nameDeleteGame;
-        do {
-            System.out.println("Podaj nazwe gry do usuniecia");
-            nameDeleteGame = scan.next();
-        } while (!saperService.validateGameName(namesGames, nameDeleteGame));
+        String nameDeleteGame = viewAllGameName(gameToDelete);
         saperService.deleteTargetGame(nameDeleteGame);
         System.out.println("Usunieta");
     }
@@ -219,25 +211,22 @@ class SaperConsoleView {
         GameDTO gameDTO;
         PlayerChoice playerChoice;
         do {
-            playerChoice = new PlayerChoice();
             gameDTO = saperService.getBoard(gameId);
             showGame(gameDTO.getBoardGameDTO());
 
-            chooseMove(gameId, gameDTO, playerChoice); //todo return playerChoice instead of set its values
-//            if (playerChoice.getMoveChoice() == MoveChoice.END) {
-//                gameDTO.setGameStatus(GameStatus.SAVE);
-//                break;
-//            } //todo nie ptrzeba bo dodalismy warunke w while END
-            gameDTO.setGameStatus(saperService.performAction(playerChoice, gameId)); //todo ekstrakcja
+            playerChoice = chooseMove(gameId, gameDTO);
 
+            GameStatus gameStatus = saperService.performAction(playerChoice, gameId);
+            gameDTO.setGameStatus(gameStatus);
         } while (playerChoice.getMoveChoice() != MoveChoice.END && gameDTO.getGameStatus() == GameStatus.DURING);
         saperService.setStatusGame(gameDTO.getGameStatus(), gameId);
         return gameDTO.getGameStatus();
     }
 
-    private void chooseMove(Integer gameId, GameDTO gameDTO, PlayerChoice playerChoice) {
-
+    private PlayerChoice chooseMove(Integer gameId, GameDTO gameDTO) {
+        PlayerChoice playerChoice = new PlayerChoice();
         boolean isFieldReveald;
+
         do {
             playerChoice.setMoveChoice(chooseMove());
 
@@ -248,6 +237,7 @@ class SaperConsoleView {
             playerChoosesCoordinates(gameDTO, playerChoice);
             isFieldReveald = validateMove(gameId, playerChoice);
         } while (isFieldReveald);
+        return playerChoice;
     }
 
     private boolean validateMove(Integer gameId, PlayerChoice playerChoice) {
