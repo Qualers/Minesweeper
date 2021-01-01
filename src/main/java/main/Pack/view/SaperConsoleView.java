@@ -1,7 +1,9 @@
 package main.pack.view;
 
+
 import lombok.RequiredArgsConstructor;
 import main.pack.service.*;
+import org.apache.commons.lang3.math.NumberUtils;
 
 import java.util.List;
 import java.util.Scanner;
@@ -14,6 +16,7 @@ public class SaperConsoleView {
     private static final String FIELD_PRINT_FORMAT = " [%s]";
     private static final String REVEALED_EMPTY_WIELD_DISPLAY_CHARACTER = " ";
     private static final Integer GAME_NAME_LENGHT = 20;
+    private static final Integer Bad_Value = -5;
 
     private Scanner scan = new Scanner(System.in);
 
@@ -21,15 +24,12 @@ public class SaperConsoleView {
 
 
     public void startApp() {
-        int activitySelection = 0;
+        int activitySelection;
         do {
+            System.out.println();
             System.out.println("Wybierz co chcesz zrobic \n1-Graj \n2-Usun wybrana gre \n3-Zakoncz program");
-            try {
-                activitySelection = scan.nextInt();
-            } catch (Exception e) {
-                System.out.println("Podales bledny znak");
-                scan.nextLine();
-            }
+            activitySelection = isDigit();
+
         } while ((activitySelection < 1) || (activitySelection > 3));
         switch (activitySelection) {
             case 1: {
@@ -57,16 +57,19 @@ public class SaperConsoleView {
     private int gameModeSelection() {
         int choice = 0;
         do {
-            try {
-                System.out.println("1-nowa gra \n2-wczytaj gre");
-                choice = scan.nextInt();
-
-            } catch (Exception e) {
-                System.out.println("Podales bledny znak");
-                scan.nextLine();
-            }
+            System.out.println("1-nowa gra \n2-wczytaj gre");
+            choice = isDigit();
         } while ((choice < 1) || (choice > 2));
         return choice;
+    }
+
+    private int isDigit() {
+        String check = scan.nextLine();
+        if (!NumberUtils.isDigits(check)) {
+            System.out.println("To nie jest cyfra, podaj wartosc jeszcze raz");
+            return Bad_Value;
+        }
+        return Integer.parseInt(check);
     }
 
     private Integer displayChooseGame(int gameMode) {
@@ -150,13 +153,8 @@ public class SaperConsoleView {
     private int getNumberOfRows() {
         int numberRows = 0;
         do {
-            try {
-                System.out.println("Podaj wysokosc planszy gry nie mniejsza niz 1 i nie wieksza niz 99");
-                numberRows = scan.nextInt();
-            } catch (Exception e) {
-                System.out.println("Podales bledny znak");
-                scan.nextLine();
-            }
+            System.out.println("Podaj wysokosc planszy gry nie mniejsza niz 1 i nie wieksza niz 99");
+            numberRows = isDigit();
         } while (numberRows < 1 || numberRows > 99);
         return numberRows;
     }
@@ -164,13 +162,13 @@ public class SaperConsoleView {
     private int getNumberOfColumns() {
         int numberColumns = 0;
         do {
-            try {
-                System.out.println("Podaj szerokosc planszy gry nie mniejsza niz 1 i nie wieksza niz 99");
-                numberColumns = scan.nextInt();
-            } catch (Exception e) {
-                System.out.println("Podales bledny znak");
-                scan.nextLine();
-            }
+            //try {
+            System.out.println("Podaj szerokosc planszy gry nie mniejsza niz 1 i nie wieksza niz 99");
+            numberColumns = isDigit();
+//            } catch (Exception e) {
+//                System.out.println("Podales bledny znak");
+//                scan.nextLine();
+//            }
         } while (numberColumns < 1 || numberColumns > 99);
         return numberColumns;
     }
@@ -178,14 +176,9 @@ public class SaperConsoleView {
     private int getNumberOfBombs() {
         int numberBombs = 0;
         do {
-            try {
-                System.out.println("Podaj ilosc bomb na planszy nie mniej niz 0 i nie wieksza niz 999");
-                numberBombs = scan.nextInt();
-            } catch (Exception e) {
-                System.out.println("Podales bledny znak");
-                scan.nextLine();
-            }
-        } while (numberBombs < 1 || numberBombs > 999);
+            System.out.println("Podaj ilosc bomb na planszy nie mniej niz 0 i nie wieksza niz 999");
+            numberBombs = isDigit();
+        } while (numberBombs < 1 || numberBombs > 9999);
         return numberBombs;
     }
 
